@@ -1,0 +1,1 @@
+LonelySpawn is a minecraft plugin which spawns players in a random location in the world they died in
