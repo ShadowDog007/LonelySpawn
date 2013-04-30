@@ -28,6 +28,8 @@
 
 package com.forgenz.lonelyspawn.config;
 
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
 import org.bukkit.configuration.ConfigurationSection;
@@ -36,6 +38,7 @@ import com.forgenz.lonelyspawn.LonelySpawn;
 
 public class WorldConfig extends AbstractConfig
 {
+	public final Location center;
 	/** The name of the world this instance manages */
 	public final String worldName;
 	
@@ -142,6 +145,8 @@ public class WorldConfig extends AbstractConfig
 		{
 			useBarrier = false;
 		}
+		
+		center = new Location(Bukkit.getWorld(worldName), centerX, minY, centerZ);
 	}
 	
 	public Integer getIntegerValue(ConfigurationSection cfg, String key)

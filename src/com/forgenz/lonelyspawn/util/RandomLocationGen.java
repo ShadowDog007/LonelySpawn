@@ -33,10 +33,9 @@ import java.util.Random;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.World;
+import org.bukkit.World.Environment;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.entity.Player;
 
 import com.forgenz.lonelyspawn.LonelySpawn;
 import com.forgenz.lonelyspawn.config.Config;
@@ -47,110 +46,195 @@ public class RandomLocationGen
 	private static Random rand = new Random();
 	private static Location loc = new Location(null, 0.0, 0.0, 0.0);
 	
+	/**
+	 * Stop instances of the class from being created
+	 */
 	private RandomLocationGen()
 	{
 		
 	}
 
-	public static Location getLocation(WorldConfig cfg)
+	/**
+	 * Generates a random location around the center location
+	 */
+	public static Location getLocation(boolean circle, Location center, int range, int minHeight, int heightRange)
 	{
 		Location loc = Bukkit.isPrimaryThread() ? RandomLocationGen.loc : new Location(null, 0.0, 0.0, 0.0);
-		return getLocation(cfg, loc);
+		return getLocation(circle, center, range, minHeight, heightRange, loc);
 	}
 	
-	public static Location getLocation(WorldConfig cfg, Location cacheLoc)
+	/**
+	 * Generates a random location around the center location
+	 */
+	public static Location getLocation(boolean circle, Location center, int range, int minHeight, int heightRange, Location cacheLoc)
 	{
-		// Make sure spawning is enabled in the world
-		if (!cfg.useRandomSpawn)
+		// Make sure the centers world is valid
+		if (center.getWorld() == null)
 		{
-			return null;
+			LonelySpawn.i().getLogger().warning("Null world passed to location generator");
+			return center;
 		}
 		
-		// Make sure the centers world is valid
-		World world = Bukkit.getWorld(cfg.worldName);
-		if (world == null)
+		// Height range must be at least 1
+		if (heightRange < 0)
+			heightRange = 1;
+		
+		int maxHeight = center.getWorld().getEnvironment() == Environment.NORMAL ? 256 : 128;
+		if (minHeight + heightRange > maxHeight)
 		{
-			LonelySpawn.i().getLogger().severe("Player spawned in a world which does not exist");
-			return null;
+			heightRange -= maxHeight - (minHeight + heightRange); 
 		}
-
+		
 		// Copy the world
-		cacheLoc.setWorld(world);
+		cacheLoc.setWorld(center.getWorld());
 		
 		// Make 10 attempts to find a safe spawning location
 		for (int i = 0; i < Config.i().locationFindAttempts; ++i)
 		{
-			// Calculate a random direction for the X/Z values
-			double theta = 2 * Math.PI * rand.nextDouble();
-			
-			// Generate random locations for X/Z
-			double trig = Math.cos(theta);
-			cacheLoc.setX(Location.locToBlock(rand.nextDouble() * cfg.heightRange * trig) + cfg.centerX + 0.5);
-			trig = Math.sin(theta);
-			cacheLoc.setZ(Location.locToBlock(rand.nextDouble() * cfg.heightRange * trig) + cfg.centerZ + 0.5);
+			// Generate the appropriate type of location
+			if (circle)
+			{
+				getCircularLocation(center, range, cacheLoc);
+			}
+			else
+			{
+				getSquareLocation(center, range, cacheLoc);
+			}
 			
 			// Generate coordinates for Y
-			cacheLoc.setY(rand.nextInt(cfg.heightRange) + cfg.minY + 0.5);
-			
-			// Generate a random Yaw/Pitch
-			cacheLoc.setYaw(rand.nextFloat() * 360.0F);
-			
-			// Check the location is safe
-			Block block = cacheLoc.getBlock();
-			
-			// If the location is not safe we try again			
-			if (!(isSafe(block) && isSafe(block.getRelative(BlockFace.UP))))
-			{
-				continue;
-			}
-			
-			boolean onGround = false;
-			// Move the position down as close to the ground as we can
-			// On our last attempt to find a spawn location we continue down till we find something
-			while (cacheLoc.getBlockY() >= cfg.minY || i == Config.i().locationFindAttempts)
-			{
-				block = block.getRelative(BlockFace.DOWN);
+			cacheLoc.setY(rand.nextInt(heightRange) + minHeight + 0.5);
 				
-				// If the below block is empty we shift the location down
-				if (isSafe(block))
-				{
-					cacheLoc.setY(cacheLoc.getY() - 1.0D);
-				}
-				// If it isn't the mob is on the ground
-				else
-				{
-					onGround = true;
-					break;
-				}
-			}
-
-			// If the location is on or near the ground the location is good
-			if (onGround || !isSafe(block.getRelative(BlockFace.DOWN)) || !isSafe(block.getRelative(BlockFace.DOWN, 2)))
+			// If the location is safe we can return the location
+			if (isLocationSafe(cacheLoc, center.getBlockY(), heightRange))
 			{
-				// If there are no nearby players, or we are on our last attempt, return the spawn location
-				if (Config.i().minPlayerDistance == 0 || i == Config.i().locationFindAttempts  || !nearbyPlayers(cacheLoc))
-					return cacheLoc;
+				// Generate a random Yaw/Pitch
+				cacheLoc.setYaw(rand.nextFloat() * 360.0F);
+				return cacheLoc;
 			}
 		}
 		
-		// If no safe location was found in a reasonable timeframe just return null
-		return null;
+		// If no safe location was found in a reasonable timeframe just return the center
+		return center;
 	}
 	
-	private static Location loc2 = new Location(null, 0.0, 0.0, 0.0);
-	
-	private static boolean nearbyPlayers(Location loc)
+	/**
+	 * Makes sure the given location is safe to spawn something there
+	 * @return true if the location is safe
+	 */
+	private static boolean isLocationSafe(Location location, int centerY, int heightRange)
 	{
-		for (Player player : Bukkit.getServer().getOnlinePlayers())
+		// Check the location is safe
+		Block block = location.getBlock();
+		
+		// If the location is not safe we try again			
+		if (!(isSafeBlock(block) && isSafeBlock(block.getRelative(BlockFace.UP))))
 		{
-			if (player.getLocation(loc2).distanceSquared(loc) < Config.i().minPlayerDistance)
-				return true;
+			return false;
 		}
+		
+		// Calculate the height diff
+		int heightDiff = Math.abs(location.getBlockY() - centerY);
+		
+		boolean onGround = false;
+		// Move the position down as close to the ground as we can
+		while (heightDiff < heightRange)
+		{
+			block = block.getRelative(BlockFace.DOWN);
 			
+			// If the below block is empty we shift the location down
+			if (isSafeBlock(block))
+			{
+				location.setY(location.getY() - 1.0D);
+				++heightDiff;
+			}
+			// If it isn't the mob is on the ground
+			else
+			{
+				onGround = true;
+				break;
+			}
+		}
+
+		// If the location is on or near the ground the location is good
+		if (onGround || !isSafeBlock(block.getRelative(BlockFace.DOWN)) || !isSafeBlock(block.getRelative(BlockFace.DOWN, 2)))
+		{
+			return true;
+		}
+		
 		return false;
 	}
 	
-	private static boolean isSafe(Block block)
+	/**
+	 * Generates a random location which is circular around the center
+	 */
+	private static Location getCircularLocation(Location center, int range, Location cacheLoc)
+	{
+		// Calculate a random direction for the X/Z values
+		double theta = 2 * Math.PI * rand.nextDouble();
+		
+		// Generate a random radius
+		double radius = rand.nextDouble() * range;
+		
+		// Set the X/Z coordinates
+		double trig = Math.cos(theta);
+		cacheLoc.setX(Location.locToBlock(radius * trig) + center.getBlockX() + 0.5);
+		trig = Math.sin(theta);
+		cacheLoc.setZ(Location.locToBlock(radius * trig) + center.getBlockZ() + 0.5);
+		
+		return cacheLoc;
+	}
+	
+	/**
+	 * Generates a random location which is square around the center
+	 */
+	private static Location getSquareLocation(Location center, int range, Location cacheLoc)
+	{
+		// Calculate the sum of all the block deviations from the center between minRange and range
+		int totalBlockCount = (range * (++range)) >> 1;
+		// Fetch a random number of blocks
+		int blockCount = totalBlockCount - rand.nextInt(totalBlockCount);
+		
+		// While the block deviation from the center for the given range is
+		// less than the number of blocks left we remove a layer of blocks
+		while (range < blockCount)
+			blockCount -= --range;
+		
+		// Pick a random location on the range line
+		int lineLoc = rand.nextInt(range << 1);
+		// Choose a line (North/East/West/South lines)
+		// Then set the X/Z coordinates
+		switch (rand.nextInt(4))
+		{
+		// East Line going North
+		case 0:
+			cacheLoc.setX(center.getBlockX() + range + 0.5D);
+			cacheLoc.setZ(center.getBlockZ() + range - lineLoc + 0.5D);
+			break;
+		// South Line going East
+		case 1:
+			cacheLoc.setX(center.getBlockX() - range + lineLoc + 0.5D);
+			cacheLoc.setZ(center.getBlockZ() + range + 0.5D);
+			break;
+		// West Line going South
+		case 2:
+			cacheLoc.setX(center.getBlockX() - range + 0.5D);
+			cacheLoc.setZ(center.getBlockZ() - range + lineLoc + 0.5D);
+			break;
+		// North Line going west
+		case 3:
+		default:
+			cacheLoc.setX(center.getBlockX() + range - lineLoc + 0.5D);
+			cacheLoc.setZ(center.getBlockZ() - range + 0.5D);
+		}
+		
+		return cacheLoc;
+	}
+	
+	/**
+	 * Checks if the block is of a type which is safe for spawning inside of
+	 * @return true if the block type is safe
+	 */
+	private static boolean isSafeBlock(Block block)
 	{
 		Material mat = block.getType();
 		
@@ -159,8 +243,6 @@ public class RandomLocationGen
 		case AIR:
 		case WEB:
 		case VINE:
-		case WATER:
-		case STATIONARY_WATER:
 		case SNOW:
 		case LONG_GRASS:
 		case DEAD_BUSH:
@@ -169,5 +251,10 @@ public class RandomLocationGen
 		default:
 			return false;
 		}
+	}
+
+	public static Location getLocation(WorldConfig cfg)
+	{
+		return getLocation(false, cfg.center, cfg.spawnRadius, cfg.minY, cfg.heightRange);
 	}
 }
