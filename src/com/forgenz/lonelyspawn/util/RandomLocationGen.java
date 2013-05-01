@@ -57,16 +57,16 @@ public class RandomLocationGen
 	/**
 	 * Generates a random location around the center location
 	 */
-	public static Location getLocation(boolean circle, Location center, int range, int minHeight, int heightRange)
+	public static Location getLocation(boolean circle, Location center, int range, int minHeight, int heightRange, boolean top)
 	{
 		Location loc = Bukkit.isPrimaryThread() ? RandomLocationGen.loc : new Location(null, 0.0, 0.0, 0.0);
-		return getLocation(circle, center, range, minHeight, heightRange, loc);
+		return getLocation(circle, center, range, minHeight, heightRange, top, loc);
 	}
 	
 	/**
 	 * Generates a random location around the center location
 	 */
-	public static Location getLocation(boolean circle, Location center, int range, int minHeight, int heightRange, Location cacheLoc)
+	public static Location getLocation(boolean circle, Location center, int range, int minHeight, int heightRange, boolean top, Location cacheLoc)
 	{
 		// Make sure the centers world is valid
 		if (center.getWorld() == null)
@@ -102,19 +102,38 @@ public class RandomLocationGen
 			}
 			
 			// Generate coordinates for Y
-			cacheLoc.setY(rand.nextInt(heightRange) + minHeight + 0.5);
-				
-			// If the location is safe we can return the location
-			if (isLocationSafe(cacheLoc, center.getBlockY(), heightRange))
+			if (top || i + 1 == Config.i().locationFindAttempts)
 			{
-				// Generate a random Yaw/Pitch
-				cacheLoc.setYaw(rand.nextFloat() * 360.0F);
-				return cacheLoc;
+				Block block = cacheLoc.getWorld().getHighestBlockAt(cacheLoc);
+				block.getLocation(cacheLoc);
+				cacheLoc.setY(cacheLoc.getY() + 1.5);
+				
+				if (isBlockSafe(block))
+				{
+					return cacheLoc;
+				}
+			}
+			else
+			{
+				cacheLoc.setY(rand.nextInt(heightRange) + minHeight + 0.5);
+				
+				// If the location is safe we can return the location
+				if (isLocationSafe(cacheLoc, center.getBlockY(), heightRange))
+				{
+					// Generate a random Yaw/Pitch
+					cacheLoc.setYaw(rand.nextFloat() * 360.0F);
+					return cacheLoc;
+				}
 			}
 		}
 		
 		// If no safe location was found in a reasonable timeframe just return the center
 		return center;
+	}
+	
+	private static boolean isBlockSafe(Block block)
+	{
+		return !block.isLiquid() && !block.isEmpty();
 	}
 	
 	/**
@@ -255,6 +274,6 @@ public class RandomLocationGen
 
 	public static Location getLocation(WorldConfig cfg)
 	{
-		return getLocation(false, cfg.center, cfg.spawnRadius, cfg.minY, cfg.heightRange);
+		return getLocation(false, cfg.center, cfg.spawnRadius, cfg.minY, cfg.heightRange, cfg.useHighestY);
 	}
 }

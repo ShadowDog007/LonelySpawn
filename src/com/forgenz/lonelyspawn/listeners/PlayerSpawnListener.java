@@ -34,6 +34,7 @@ import org.bukkit.World;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 
 import com.forgenz.lonelyspawn.config.Config;
@@ -43,6 +44,41 @@ import com.forgenz.lonelyspawn.util.RandomLocationGen;
 
 public class PlayerSpawnListener implements Listener
 {
+	@EventHandler(priority = EventPriority.NORMAL)
+	public void onPlayerFirstJoin(PlayerJoinEvent event)
+	{
+		if (event.getPlayer().hasPlayedBefore())
+		{
+			return;
+		}
+		
+		// Fetch the worlds config
+		WorldConfig cfg = Config.i().defaultWorld;
+		// If there is no default world, let minecraft do its thing
+		if (cfg == null)
+			return;
+				
+		// Fetch a random spawn location
+		Location randomSpawn;
+			
+		do
+		{
+			randomSpawn = RandomLocationGen.getLocation(cfg);
+		}
+		while (PlayerFinder.playerNear(randomSpawn));
+		
+		// If no location was found just use the world location
+		World world = Bukkit.getWorld(cfg.worldName);
+		// If the world does not exist.... Let minecraft do its thing :/
+		if (world == null)
+			return;
+				
+		if (randomSpawn == cfg.center)
+			randomSpawn = world.getSpawnLocation();
+		
+		event.getPlayer().teleport(randomSpawn);
+	}
+	
 	/**
 	 * Handles player spawns
 	 * @param event

@@ -72,7 +72,7 @@ public class Config extends AbstractConfig
 		minPlayerDistance = temp < 0 ? 0 : temp; 
 		set(cfg, "MinPlayerDistance", minPlayerDistance);
 		
-		String defWorldName = cfg.getString("DefaultWorld", null);
+		String defWorldName = cfg.getString("DefaultWorld", "world");
 		set(cfg, "DefaultWorld", defWorldName);
 		
 		// Configure worlds
@@ -157,20 +157,6 @@ public class Config extends AbstractConfig
 		
 		if (defaultWorld != null)
 			return true;
-		
-		return false;
-	}
-	
-	public boolean listenForPlayerMovement()
-	{
-		if (worlds.size() == 0)
-			return false;
-		
-		for (WorldConfig cfg : getWorlds())
-		{
-			if (cfg.useBarrier)
-				return true;
-		}
 		
 		return false;
 	}

@@ -49,6 +49,8 @@ public class WorldConfig extends AbstractConfig
 	
 	public final boolean useRandomSpawn;
 	
+	public final boolean useHighestY;
+	
 	/** The max distance above minY the player can spawn at */
 	public final int heightRange;
 	/** The min Y a player will spawn at */
@@ -56,11 +58,6 @@ public class WorldConfig extends AbstractConfig
 	
 	/** The radius around the center to spawn players */
 	public final Integer spawnRadius;
-	
-	public final boolean useBarrier;
-	
-	/** The radius around the center to push back players */
-	public final Integer barrierRadius;
 	
 	
 	public WorldConfig(ConfigurationSection cfg, World world)
@@ -75,10 +72,15 @@ public class WorldConfig extends AbstractConfig
 		{
 			Integer temp;
 			// Fetch min/max Y
-			temp = cfg.getInt("MaxY", world.getEnvironment() == Environment.NORMAL ? 256 : 128);
+			temp = cfg.getInt("MaxY", world.getEnvironment() == Environment.NORMAL ? 80 : 128);
+			set(cfg, "MaxY", temp);
 			
 			Integer temp2;
-			temp2 = cfg.getInt("MinY", 0);
+			temp2 = cfg.getInt("MinY", world.getEnvironment() == Environment.NORMAL ? 50 : 40);
+			set(cfg, "MinY", temp2);
+			
+			temp = temp < 0 ? (world.getEnvironment() == Environment.NORMAL ? 80 : 128) : temp;
+			temp = temp < 0 ? (world.getEnvironment() == Environment.NORMAL ? 50 : 40) : temp;
 			
 			if (temp < temp2)
 			{
@@ -87,20 +89,18 @@ public class WorldConfig extends AbstractConfig
 				temp = temp ^ temp2;
 			}
 			
-			temp = temp < 0 ? (world.getEnvironment() == Environment.NORMAL ? 256 : 128) : temp;
-			temp2 = temp2 < 0 ? 0 : temp2;
+			temp = temp < 0 ? 80 : temp;
+			temp2 = temp2 < 0 ? 50 : temp2;
 			
-			heightRange = temp;
+			heightRange = temp - temp2;
 			minY = temp2;
 			
-			// Fetch the spawn radius
-			temp = getIntegerValue(cfg, "SpawnRadius");
-			spawnRadius = temp != null ? temp * temp : null;
+			useHighestY = cfg.getBoolean("SpawnOnHighestBlock", true);
+			set(cfg, "SpawnOnHighestBlock", useHighestY);
 			
-			// Fetch the barrier radius
-			temp = getIntegerValue(cfg, "BarrierRadius");
-			temp = temp != null ? temp * temp : spawnRadius;
-			barrierRadius = spawnRadius > temp ? spawnRadius : temp;
+			// Fetch the spawn radius
+			spawnRadius = getIntegerValue(cfg, "SpawnRadius");
+			set(cfg, "SpawnRadius", spawnRadius);
 		}
 		// If the center coords are invalid theres no point in gathering values for these variables
 		else
@@ -108,7 +108,7 @@ public class WorldConfig extends AbstractConfig
 			heightRange = 0;
 			minY = 0;
 			spawnRadius = null;
-			barrierRadius = null;
+			useHighestY = true;
 		}
 		
 		if (cfg.getBoolean("UseRandomSpawn", false))
@@ -128,23 +128,7 @@ public class WorldConfig extends AbstractConfig
 			useRandomSpawn = false;
 		}
 		
-		// Shall we enable the barrier?
-		if (cfg.getBoolean("UseBarrier", false))
-		{
-			if (barrierRadius != null)
-			{
-				useBarrier = true;
-			}
-			else
-			{
-				useBarrier = false;
-				LonelySpawn.i().getLogger().warning("PlayerBarrier disabled in " + worldName + " due to invalid config");
-			}
-		}
-		else
-		{
-			useBarrier = false;
-		}
+		set(cfg, "UseRandomSpawn", useRandomSpawn);
 		
 		center = new Location(Bukkit.getWorld(worldName), centerX, minY, centerZ);
 	}

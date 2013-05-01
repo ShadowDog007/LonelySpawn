@@ -43,16 +43,15 @@ public class LonelySpawn extends JavaPlugin
 	
 	public void onEnable()
 	{
-		new Config();
 		i = this;
+		new Config();
+		
+		saveConfig();
 		
 		boolean listenForSpawns = Config.i().listenForSpawns();
-		boolean listenForPlayerMovement = Config.i().listenForPlayerMovement();
 		
 		if (listenForSpawns)
 			getServer().getPluginManager().registerEvents(new PlayerSpawnListener(), this);
-		
-		if (listenForPlayerMovement);
 	}
 	
 	public void onDisable()
