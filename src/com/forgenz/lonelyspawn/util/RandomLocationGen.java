@@ -34,6 +34,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World.Environment;
+import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 
@@ -105,6 +106,10 @@ public class RandomLocationGen
 			if (top || i + 1 == Config.i().locationFindAttempts)
 			{
 				Block block = cacheLoc.getWorld().getHighestBlockAt(cacheLoc);
+				if (block.getBiome() == Biome.OCEAN)
+				{
+					continue;
+				}
 				block.getLocation(cacheLoc);
 				cacheLoc.setY(cacheLoc.getY() + 1.5);
 				
@@ -115,6 +120,12 @@ public class RandomLocationGen
 			}
 			else
 			{
+				Block block = cacheLoc.getBlock();
+				if (block.getBiome() == Biome.OCEAN)
+				{
+					continue;
+				}
+				
 				cacheLoc.setY(rand.nextInt(heightRange) + minHeight + 0.5);
 				
 				// If the location is safe we can return the location
