@@ -31,6 +31,7 @@ package com.forgenz.lonelyspawn.config;
 import java.util.HashMap;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -43,10 +44,13 @@ public class Config extends AbstractConfig
 	public static Config i()
 	{
 		return c;
-	}
-	
+	}	
 	
 	public WorldConfig defaultWorld;
+	
+	public final boolean generateSpawnsAsynchronously;
+	
+	public final String spawnMessage;
 	
 	/** The number of attempts to find a spawn away from players */
 	public final int locationFindAttempts;
@@ -60,6 +64,14 @@ public class Config extends AbstractConfig
 	{
 		c = this;
 		FileConfiguration cfg = LonelySpawn.i().getConfig();
+		
+		generateSpawnsAsynchronously = cfg.getBoolean("GenerateSpawnsAsynchronously", false);
+		set(cfg, "GenerateSpawnsAsynchronously", generateSpawnsAsynchronously);
+		
+		String tempStr = cfg.getString("SpawnMessage", null);
+		tempStr = tempStr != null && tempStr.length() > 0 ? tempStr : "";
+		spawnMessage = ChatColor.translateAlternateColorCodes('&', tempStr);
+		set(cfg, "SpawnMessage", tempStr);
 		
 		int temp;
 		

@@ -32,6 +32,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import com.forgenz.lonelyspawn.config.Config;
 import com.forgenz.lonelyspawn.listeners.PlayerSpawnListener;
+import com.forgenz.lonelyspawn.util.PlayerSpawnChecker;
+import com.forgenz.lonelyspawn.util.PlayerSpawnFinder;
 
 public class LonelySpawn extends JavaPlugin
 {
@@ -41,6 +43,9 @@ public class LonelySpawn extends JavaPlugin
 		return i;
 	}
 	
+	public PlayerSpawnFinder spawnFinder;
+	public PlayerSpawnChecker spawnChecker;
+	
 	public void onEnable()
 	{
 		i = this;
@@ -48,10 +53,12 @@ public class LonelySpawn extends JavaPlugin
 		
 		saveConfig();
 		
-		boolean listenForSpawns = Config.i().listenForSpawns();
-		
-		if (listenForSpawns)
-			getServer().getPluginManager().registerEvents(new PlayerSpawnListener(), this);
+		if (Config.i().listenForSpawns())
+		{
+			getServer().getPluginManager().registerEvents(new PlayerSpawnListener(this), this);
+			spawnFinder = new PlayerSpawnFinder();
+			spawnChecker = new PlayerSpawnChecker();
+		}
 	}
 	
 	public void onDisable()

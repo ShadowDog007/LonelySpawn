@@ -79,6 +79,10 @@ public class PlayerFinder
 			// Copy the players location into pLoc
 			player.getLocation(pLoc);
 			
+			// Any players above y = 1000 are waiting for spawns
+			if (pLoc.getBlockY() > 1000)
+				continue;
+			
 			// Check the if the distance between the entity and the player is less than the search distance
 			// Then check the if the height difference is small enough
 			// Return true as soon as we find a player which matches these requirements

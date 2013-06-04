@@ -130,7 +130,7 @@ public class WorldConfig extends AbstractConfig
 		
 		set(cfg, "UseRandomSpawn", useRandomSpawn);
 		
-		center = new Location(Bukkit.getWorld(worldName), centerX, minY, centerZ);
+		center = new Location(Bukkit.getWorld(worldName), centerX, 10000, centerZ);
 	}
 	
 	public Integer getIntegerValue(ConfigurationSection cfg, String key)

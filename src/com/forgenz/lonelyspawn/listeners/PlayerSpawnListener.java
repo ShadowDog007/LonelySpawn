@@ -28,97 +28,80 @@
 
 package com.forgenz.lonelyspawn.listeners;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.World;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 
+import com.forgenz.lonelyspawn.LonelySpawn;
 import com.forgenz.lonelyspawn.config.Config;
 import com.forgenz.lonelyspawn.config.WorldConfig;
-import com.forgenz.lonelyspawn.util.PlayerFinder;
-import com.forgenz.lonelyspawn.util.RandomLocationGen;
 
 public class PlayerSpawnListener implements Listener
 {
-	@EventHandler(priority = EventPriority.NORMAL)
+	private final LonelySpawn plugin;
+	
+	public PlayerSpawnListener(LonelySpawn plugin)
+	{
+		this.plugin = plugin;
+	}
+	
+	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerFirstJoin(PlayerJoinEvent event)
 	{
+		// If the player has played before we do nothing
 		if (event.getPlayer().hasPlayedBefore())
 		{
 			return;
 		}
 		
-		// Fetch the worlds config
-		WorldConfig cfg = Config.i().defaultWorld;
-		// If there is no default world, let minecraft do its thing
+		// Fetch the config
+		WorldConfig cfg = getConfig(event.getPlayer());
+		
 		if (cfg == null)
-			return;
-				
-		// Fetch a random spawn location
-		Location randomSpawn;
-			
-		do
 		{
-			randomSpawn = RandomLocationGen.getLocation(cfg);
-		}
-		while (PlayerFinder.playerNear(randomSpawn));
-		
-		// If no location was found just use the world location
-		World world = Bukkit.getWorld(cfg.worldName);
-		// If the world does not exist.... Let minecraft do its thing :/
-		if (world == null)
 			return;
-				
-		if (randomSpawn == cfg.center)
-			randomSpawn = world.getSpawnLocation();
+		}
 		
-		event.getPlayer().teleport(randomSpawn);
+		// Queue player for spawning
+		plugin.spawnFinder.addSpawningPlayer(event.getPlayer(), cfg);
+		
+		event.getPlayer().teleport(cfg.center);
 	}
 	
 	/**
 	 * Handles player spawns
 	 * @param event
 	 */
-	@EventHandler(priority = EventPriority.LOW)
-	public void onPlayerRespawn(PlayerRespawnEvent event)
-	{
+	@EventHandler(priority = EventPriority.HIGHEST)
+	public void onPlayerRespawn(final PlayerRespawnEvent event)
+	{		
 		// If the player has spawned on their bed, do nothing
 		if (event.isBedSpawn())
 			return;
 		
+		final WorldConfig cfg = getConfig(event.getPlayer());
+		
+		if (cfg == null)
+		{
+			return;
+		}
+		
+		plugin.spawnFinder.addSpawningPlayer(event.getPlayer(), cfg);
+		
+		event.setRespawnLocation(cfg.center);
+	}
+	
+	public WorldConfig getConfig(Player player)
+	{
 		// Fetch the worlds config
-		WorldConfig cfg = Config.i().getWorldCfg(event.getPlayer().getWorld());
+		WorldConfig cfg = Config.i().getWorldCfg(player.getWorld());
 		// If the world config was not found or randomSpawn is disabled for this world
 		// Use the default world
-		if (cfg == null || !cfg.useRandomSpawn)
-			cfg = Config.i().defaultWorld;
-		
-		// If there is no default world, let minecraft do its thing
-		if (cfg == null)
-			return;
-		
-		// Fetch a random spawn location
-		Location randomSpawn;
-		
-		do
-		{
-			randomSpawn = RandomLocationGen.getLocation(cfg);
-		}
-		while (PlayerFinder.playerNear(randomSpawn));
-		
-		// If no location was found just use the world location
-		World world = Bukkit.getWorld(cfg.worldName);
-		// If the world does not exist.... Let minecraft do its thing :/
-		if (world == null)
-			return;
-		
-		if (randomSpawn == cfg.center)
-			randomSpawn = world.getSpawnLocation();
-		
-		event.setRespawnLocation(randomSpawn);
+		if (cfg == null || !cfg.useRandomSpawn) cfg = Config.i().defaultWorld;
+
+		return cfg;
 	}
 }
