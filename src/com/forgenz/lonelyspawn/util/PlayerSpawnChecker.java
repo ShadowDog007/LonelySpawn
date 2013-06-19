@@ -25,10 +25,10 @@ public class PlayerSpawnChecker implements Runnable
 	
 	public boolean checkSpawn(final Player player, final WorldConfig cfg, final Location spawn)
 	{
-		return checkSpawn(player, cfg, spawn, true);
+		return checkSpawn(player, cfg, spawn, true, null);
 	}
 	
-	private boolean checkSpawn(final Player player, final WorldConfig cfg, final Location spawn, boolean first)
+	private boolean checkSpawn(final Player player, final WorldConfig cfg, final Location spawn, boolean first, Chunk chunk)
 	{		
 		// If any arguments are invalid we return
 		if (player == null || !player.isValid() || spawn == null || spawn.getWorld() == null)
@@ -51,7 +51,7 @@ public class PlayerSpawnChecker implements Runnable
 				public void accept(Chunk chunk)
 				{
 					// If the spawn is bad we find a new one
-					if (!checkSpawn(player, cfg, spawn, false))
+					if (!checkSpawn(player, cfg, spawn, false, chunk))
 					{
 						LonelySpawn.i().spawnFinder.addSpawningPlayer(player, cfg);
 					}
@@ -76,6 +76,8 @@ public class PlayerSpawnChecker implements Runnable
 		Biome spawnBiome = spawn.getWorld().getBiome(spawn.getBlockX(), spawn.getBlockZ());
 		if (spawnBiome == Biome.OCEAN || spawnBiome == Biome.FROZEN_OCEAN)
 		{
+			// We don't need this chunk anymore, make sure we unload it
+			chunk.unload();
 			return false;
 		}
 		
@@ -113,7 +115,7 @@ public class PlayerSpawnChecker implements Runnable
 		
 		if (scheduled.compareAndSet(false, true))
 		{
-			Bukkit.getScheduler().runTaskLater(LonelySpawn.i(), this, 1L);
+			Bukkit.getScheduler().runTask(LonelySpawn.i(), this);
 		}
 	}
 

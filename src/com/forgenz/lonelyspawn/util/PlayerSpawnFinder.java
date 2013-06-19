@@ -47,11 +47,11 @@ public class PlayerSpawnFinder implements Runnable
 		{
 			if (Config.i().generateSpawnsAsynchronously)
 			{
-				Bukkit.getScheduler().runTaskLaterAsynchronously(LonelySpawn.i(), this, 1L);
+				Bukkit.getScheduler().runTaskAsynchronously(LonelySpawn.i(), this);
 			}
 			else
 			{
-				Bukkit.getScheduler().runTaskLater(LonelySpawn.i(), this, 1L);
+				Bukkit.getScheduler().runTask(LonelySpawn.i(), this);
 			}
 			
 		}
@@ -72,11 +72,11 @@ public class PlayerSpawnFinder implements Runnable
 		{
 			if (Config.i().generateSpawnsAsynchronously)
 			{
-				Bukkit.getScheduler().runTaskLaterAsynchronously(LonelySpawn.i(), this, 1L);
+				Bukkit.getScheduler().runTaskAsynchronously(LonelySpawn.i(), this);
 			}
 			else
 			{
-				Bukkit.getScheduler().runTaskLater(LonelySpawn.i(), this, 1L);
+				Bukkit.getScheduler().runTask(LonelySpawn.i(), this);
 			}
 		}
 	}
