@@ -50,16 +50,14 @@ public class PlayerSpawnChecker implements Runnable
 			{				
 				public void accept(Chunk chunk)
 				{
+					if (!player.isValid())
+						return;
+					
 					// If the spawn is bad we find a new one
 					if (!checkSpawn(player, cfg, spawn, false, chunk))
 					{
 						LonelySpawn.i().spawnFinder.addSpawningPlayer(player, cfg);
 					}
-				}
-				
-				public boolean isCancelled()
-				{
-					return !player.isValid();
 				}
 			});
 			return true;
