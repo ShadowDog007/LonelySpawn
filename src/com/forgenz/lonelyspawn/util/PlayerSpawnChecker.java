@@ -9,7 +9,6 @@ import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.block.Biome;
 import org.bukkit.entity.Player;
-import org.bukkit.util.QueuedProcess;
 import org.bukkit.util.Vector;
 
 import com.forgenz.lonelyspawn.LonelySpawn;
@@ -24,11 +23,6 @@ public class PlayerSpawnChecker implements Runnable
 	private ConcurrentHashMap<String, WorldConfig> playerConfigs = new ConcurrentHashMap<String, WorldConfig>();
 	
 	public boolean checkSpawn(final Player player, final WorldConfig cfg, final Location spawn)
-	{
-		return checkSpawn(player, cfg, spawn, null);
-	}
-	
-	private boolean checkSpawn(final Player player, final WorldConfig cfg, final Location spawn, Chunk chunk)
 	{		
 		// If any arguments are invalid we return
 		if (player == null || !player.isValid() || spawn == null || spawn.getWorld() == null)
@@ -43,25 +37,7 @@ public class PlayerSpawnChecker implements Runnable
 			return true;
 		}
 		
-		// If the chunk is not loaded we attempt to load it later
-		if (!spawn.getWorld().isChunkLoaded(spawn.getBlockX() >> 4, spawn.getBlockZ() >> 4))
-		{
-			spawn.getWorld().loadChunkWithCallback(spawn.getBlockX() >> 4, spawn.getBlockZ() >> 4, new QueuedProcess<Chunk>()
-			{				
-				public void accept(Chunk chunk)
-				{
-					if (!player.isValid())
-						return;
-					
-					// If the spawn is bad we find a new one
-					if (!checkSpawn(player, cfg, spawn, chunk))
-					{
-						LonelySpawn.i().spawnFinder.addSpawningPlayer(player, cfg);
-					}
-				}
-			});
-			return true;
-		}
+		Chunk chunk = spawn.getWorld().getChunkAt(spawn.getBlockX() >> 4, spawn.getBlockZ() >> 4);
 		
 		// If the biome is Ocean we do not want to spawn the player there
 		Biome spawnBiome = spawn.getWorld().getBiome(spawn.getBlockX(), spawn.getBlockZ());
