@@ -25,15 +25,19 @@ public class PlayerSpawnChecker implements Runnable
 	
 	public boolean checkSpawn(final Player player, final WorldConfig cfg, final Location spawn)
 	{
-		return checkSpawn(player, cfg, spawn, null);
-	}
-	
-	private boolean checkSpawn(final Player player, final WorldConfig cfg, final Location spawn, Chunk chunk)
-	{		
-		// If any arguments are invalid we return
-		if (player == null || !player.isValid() || spawn == null || spawn.getWorld() == null)
+		if (player == null)
 		{
+			LonelySpawn.i().getLogger().severe("Invalid player was provided to the spawn checker");
 			return true;
+		}
+		
+		if (!player.isValid())
+			return true;
+		
+		if (cfg == null || spawn == null || spawn.getWorld() == null)
+		{
+			LonelySpawn.i().getLogger().severe("Invalid parameters were provided to spawn checker when spawning player: " + player.getName());
+			return false;
 		}
 		
 		// Ignore player if we are not in the main thread
@@ -42,27 +46,27 @@ public class PlayerSpawnChecker implements Runnable
 			LonelySpawn.i().getLogger().severe("Spawn was checked in async");
 			return true;
 		}
-		
-		// If the chunk is not loaded we attempt to load it later
-		if (!spawn.getWorld().isChunkLoaded(spawn.getBlockX() >> 4, spawn.getBlockZ() >> 4))
-		{
-			spawn.getWorld().loadChunkWithCallback(spawn.getBlockX() >> 4, spawn.getBlockZ() >> 4, new QueuedProcess<Chunk>()
-			{				
-				public void accept(Chunk chunk)
-				{
-					if (!player.isValid())
-						return;
-					
-					// If the spawn is bad we find a new one
-					if (!checkSpawn(player, cfg, spawn, chunk))
+				
+		// Wait for the chunk to be loaded
+		spawn.getWorld().loadChunkWithCallback(spawn.getBlockX() >> 4, spawn.getBlockZ() >> 4, new QueuedProcess<Chunk>()
+				{				
+					public void accept(Chunk chunk)
 					{
-						LonelySpawn.i().spawnFinder.addSpawningPlayer(player, cfg);
+						if (!player.isValid())
+							return;
+						
+						// If the spawn is bad we find a new one
+						if (!checkSpawn(player, cfg, spawn, chunk))
+						{
+							LonelySpawn.i().spawnFinder.addSpawningPlayer(player, cfg);
+						}
 					}
-				}
-			});
-			return true;
-		}
-		
+				});
+		return true;
+	}
+	
+	private boolean checkSpawn(final Player player, final WorldConfig cfg, final Location spawn, Chunk chunk)
+	{
 		// If the biome is Ocean we do not want to spawn the player there
 		Biome spawnBiome = spawn.getWorld().getBiome(spawn.getBlockX(), spawn.getBlockZ());
 		if (spawnBiome == Biome.OCEAN || spawnBiome == Biome.FROZEN_OCEAN)
