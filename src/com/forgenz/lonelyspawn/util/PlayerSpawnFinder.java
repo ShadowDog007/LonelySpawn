@@ -39,7 +39,17 @@ public class PlayerSpawnFinder implements Runnable
 	
 			// Find a spawn for the player
 			Location loc = unusedLocations.peek() != null ? unusedLocations.poll() : new Location(null, 0.0, 0.0, 0.0);
-			RandomLocationGen.findSpawn(player, cfg, loc);
+			Location spawn = RandomLocationGen.findSpawn(player, cfg, loc);
+			
+			// Check we have a spawn and make sure there are no nearby players
+			if (spawn == null || PlayerFinder.playerNear(loc, cfg.minPlayerDistanceSquared))
+			{
+				addSpawningPlayer(player, cfg);
+				continue;
+			}
+			
+			// Check if the spawn is adequate
+			LonelySpawn.i().spawnChecker.add(player, loc, cfg);
 		}
 		
 		// Make sure the task is not already scheduled to run

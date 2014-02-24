@@ -25,10 +25,10 @@ public class PlayerSpawnChecker implements Runnable
 	
 	public boolean checkSpawn(final Player player, final WorldConfig cfg, final Location spawn)
 	{
-		return checkSpawn(player, cfg, spawn, true, null);
+		return checkSpawn(player, cfg, spawn, null);
 	}
 	
-	private boolean checkSpawn(final Player player, final WorldConfig cfg, final Location spawn, boolean first, Chunk chunk)
+	private boolean checkSpawn(final Player player, final WorldConfig cfg, final Location spawn, Chunk chunk)
 	{		
 		// If any arguments are invalid we return
 		if (player == null || !player.isValid() || spawn == null || spawn.getWorld() == null)
@@ -54,20 +54,13 @@ public class PlayerSpawnChecker implements Runnable
 						return;
 					
 					// If the spawn is bad we find a new one
-					if (!checkSpawn(player, cfg, spawn, false, chunk))
+					if (!checkSpawn(player, cfg, spawn, chunk))
 					{
 						LonelySpawn.i().spawnFinder.addSpawningPlayer(player, cfg);
 					}
 				}
 			});
 			return true;
-		}
-		
-		// If this chunk was already loaded on our first check
-		// There could already be players nearby
-		if (first)
-		{
-			LonelySpawn.i().spawnFinder.addSpawningPlayer(player, cfg);
 		}
 		
 		// If the biome is Ocean we do not want to spawn the player there
@@ -90,7 +83,9 @@ public class PlayerSpawnChecker implements Runnable
 		player.setVelocity(v);
 		
 		// Send the player a message if one exists
-		if (Config.i().spawnMessage.length() > 0)
+		if (cfg.spawnMessage.length() > 0)
+			player.sendMessage(cfg.spawnMessage);
+		else if (Config.i().spawnMessage.length() > 0)
 			player.sendMessage(Config.i().spawnMessage);
 		
 		// Mark Location as available for use

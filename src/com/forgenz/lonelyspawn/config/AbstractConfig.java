@@ -116,4 +116,18 @@ public abstract class AbstractConfig
 		cfg.set(path, null);
 		cfg.set(path, obj);
 	}
+	
+	@SuppressWarnings("unchecked")
+	public static <T> T getAndSet(ConfigurationSection cfg, String path, T def)
+	{
+		Object val = cfg.get(path);
+		
+		if (val == null)
+			val = def;
+		else if (!def.getClass().isAssignableFrom(val.getClass()))
+			val = def;
+		
+		set(cfg, path, val);
+		return (T) val;
+	}
 }

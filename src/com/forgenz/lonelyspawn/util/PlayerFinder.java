@@ -36,8 +36,6 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Flying;
 import org.bukkit.entity.Player;
 
-import com.forgenz.lonelyspawn.config.Config;
-
 public class PlayerFinder
 {
 	private static Location pLoc = new Location(null, 0.0, 0.0, 0.0);
@@ -52,14 +50,9 @@ public class PlayerFinder
 	/**
 	 * Scans nearby chunks for players on layers which cross a given height
 	 * 
-	 * @param world The World the chunk is in
-	 * @param entity The entity to check for players around
-	 * @param flying If true layers further down will be checked for player to allow for more flying mobs
-	 * 
-	 * @return True if there is a player within range of the center chunk and in
-	 *         a layer which overlaps the height 'y'
+	 * @return True if there is a player within range of the location
 	 */
-	public static boolean playerNear(Location loc)
+	public static boolean playerNear(Location loc, int minPlayerDistanceSquared)
 	{		
 		// Fetch the entities location and sets the pLoc object to use
 		// If the function is run in the primary thread we use a cached object else we make new ones
@@ -83,10 +76,10 @@ public class PlayerFinder
 			if (pLoc.getBlockY() > 1000)
 				continue;
 			
-			// Check the if the distance between the entity and the player is less than the search distance
-			// Then check the if the height difference is small enough
-			// Return true as soon as we find a player which matches these requirements
-			if (Math.pow(pLoc.getX() - loc.getX(), 2) + Math.pow(pLoc.getZ() - loc.getZ(), 2) <= Config.i().minPlayerDistance)
+			// Check the if the distance between the location and the player is less than the minimum
+			int x = pLoc.getBlockX() - loc.getBlockX();
+			int z = pLoc.getBlockZ() - loc.getBlockZ();
+			if (x * x + z * z <= minPlayerDistanceSquared)
 				return true;
 		}
 		

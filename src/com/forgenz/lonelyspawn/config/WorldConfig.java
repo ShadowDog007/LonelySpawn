@@ -29,12 +29,11 @@
 package com.forgenz.lonelyspawn.config;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
 import org.bukkit.configuration.ConfigurationSection;
-
-import com.forgenz.lonelyspawn.LonelySpawn;
 
 public class WorldConfig extends AbstractConfig
 {
@@ -43,9 +42,9 @@ public class WorldConfig extends AbstractConfig
 	public final String worldName;
 	
 	/** The X component of the center of the world */
-	public final Integer centerX;
+	public final int centerX;
 	/** The Z component of the center of the world */
-	public final Integer centerZ;
+	public final int centerZ;
 	
 	public final boolean useRandomSpawn;
 	
@@ -57,106 +56,66 @@ public class WorldConfig extends AbstractConfig
 	public final int minY;
 	
 	/** The radius around the center to spawn players */
-	public final Integer spawnRadius;
+	public final int spawnRadius;
+	
+	/** How lonely do players want to be? */
+	public final int minPlayerDistance, minPlayerDistanceSquared;
+	
+	public final String spawnMessage;
 	
 	
 	public WorldConfig(ConfigurationSection cfg, World world)
 	{
-		worldName = world.getName();
+		this.worldName = world.getName();
 		
 		// Fetch center location
-		centerX = getIntegerValue(cfg, "CenterX");
-		centerZ = getIntegerValue(cfg, "CenterZ");
+		this.centerX = getAndSet(cfg, "CenterX", 0);
+		this.centerZ = getAndSet(cfg, "CenterZ", 0);
 		
-		if (centerX != null && centerZ != null)
+		// Fetch min/max Y
+		int maxy = getAndSet(cfg, "MaxY", world.getEnvironment() == Environment.NORMAL ? 80 : 128);
+		int miny = getAndSet(cfg, "MinY", world.getEnvironment() == Environment.NORMAL ? 50 : 40);
+
+		if (maxy < miny)
 		{
-			Integer temp;
-			// Fetch min/max Y
-			temp = cfg.getInt("MaxY", world.getEnvironment() == Environment.NORMAL ? 80 : 128);
-			set(cfg, "MaxY", temp);
-			
-			Integer temp2;
-			temp2 = cfg.getInt("MinY", world.getEnvironment() == Environment.NORMAL ? 50 : 40);
-			set(cfg, "MinY", temp2);
-			
-			temp = temp < 0 ? (world.getEnvironment() == Environment.NORMAL ? 80 : 128) : temp;
-			temp = temp < 0 ? (world.getEnvironment() == Environment.NORMAL ? 50 : 40) : temp;
-			
-			if (temp < temp2)
-			{
-				temp = temp ^ temp2;
-				temp2 = temp ^ temp2;
-				temp = temp ^ temp2;
-			}
-			
-			temp = temp < 0 ? 80 : temp;
-			temp2 = temp2 < 0 ? 50 : temp2;
-			
-			heightRange = temp - temp2;
-			minY = temp2;
-			
-			useHighestY = cfg.getBoolean("SpawnOnHighestBlock", true);
-			set(cfg, "SpawnOnHighestBlock", useHighestY);
-			
-			// Fetch the spawn radius
-			spawnRadius = getIntegerValue(cfg, "SpawnRadius");
-			set(cfg, "SpawnRadius", spawnRadius);
-		}
-		// If the center coords are invalid theres no point in gathering values for these variables
-		else
-		{
-			heightRange = 0;
-			minY = 0;
-			spawnRadius = null;
-			useHighestY = true;
+			maxy = maxy ^ miny;
+			miny = maxy ^ miny;
+			maxy = maxy ^ miny;
 		}
 		
-		if (cfg.getBoolean("UseRandomSpawn", false))
-		{
-			if (spawnRadius != null)
-			{
-				useRandomSpawn = true;
-			}
-			else
-			{
-				useRandomSpawn = false;
-				LonelySpawn.i().getLogger().warning("RandomSpawn disabled in " + worldName + " due to invalid config");
-			}
-		}
-		else
-		{
-			useRandomSpawn = false;
-		}
+		maxy = maxy < 0 ? (world.getEnvironment() == Environment.NORMAL ? 80 : 128) : maxy;
+		miny = miny < 0 ? (world.getEnvironment() == Environment.NORMAL ? 50 : 40) : miny;
 		
-		set(cfg, "UseRandomSpawn", useRandomSpawn);
+		if (maxy > 256)
+			maxy = 256;
 		
-		center = new Location(Bukkit.getWorld(worldName), centerX, 10000, centerZ);
-	}
-	
-	public Integer getIntegerValue(ConfigurationSection cfg, String key)
-	{
-		int temp = cfg.getInt(key, Integer.MIN_VALUE);
+		set(cfg, "MaxY", maxy);
+		set(cfg, "MinY", miny);
+
+		this.heightRange = maxy - miny;
+		this.minY = miny;
+
+		this.useHighestY = getAndSet(cfg, "SpawnOnHighestBlock", true);
+
+		// Fetch the spawn radius
+		int spawnRadius = getAndSet(cfg, "SpawnRadius", 3000);
+		if (spawnRadius < 0)
+			spawnRadius = 1000;
+		set(cfg, "SpawnRadius", spawnRadius);
+		this.spawnRadius = spawnRadius;
 		
-		if (temp == Integer.MIN_VALUE)
-			return null;
+		int minPlayerDistance = getAndSet(cfg, "MinPlayerDistance", 300);
+		if (minPlayerDistance < 0)
+			minPlayerDistance = 0;
 		
-		return temp;
-	}
-	
-	public boolean checkConfig()
-	{
-		if (centerX == null || centerZ == null)
-		{
-			LonelySpawn.i().getLogger().warning("Invalid center location for " + worldName);
-			return false;
-		}
+		this.minPlayerDistance = minPlayerDistance;
+		this.minPlayerDistanceSquared = minPlayerDistance * minPlayerDistance;
 		
-		if (spawnRadius == null)
-		{
-			LonelySpawn.i().getLogger().warning("SpawnRadius is not set for " + worldName);
-			return false;
-		}
+		String spawnMessage = getAndSet(cfg, "SpawnMessage", "");
+		this.spawnMessage = ChatColor.translateAlternateColorCodes('&', spawnMessage);
 		
-		return true;
+		this.useRandomSpawn = getAndSet(cfg, "UseRandomSpawn", false);
+		
+		this.center = new Location(Bukkit.getWorld(worldName), centerX, 10000, centerZ);
 	}
 }

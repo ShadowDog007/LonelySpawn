@@ -48,11 +48,9 @@ public class RandomLocationGen
 		
 	}
 
-	public static void findSpawn(Player player, WorldConfig cfg, Location loc)
+	public static Location findSpawn(Player player, WorldConfig cfg, Location loc)
 	{
-		getLocation(cfg, loc);
-		// Check if the spawn is adequate
-		LonelySpawn.i().spawnChecker.add(player, loc, cfg);
+		return getLocation(cfg, loc);
 	}
 	
 	public static Location getLocation(WorldConfig cfg, Location cache)

@@ -55,9 +55,6 @@ public class Config extends AbstractConfig
 	/** The number of attempts to find a spawn away from players */
 	public final int locationFindAttempts;
 	
-	/** If two players are within this distance when one is trying to spawn, the spawn will occur elsewhere */
-	public final int minPlayerDistance;
-	
 	private final HashMap<String, WorldConfig> worlds = new HashMap<String, WorldConfig>();
 	
 	public Config()
@@ -65,27 +62,20 @@ public class Config extends AbstractConfig
 		c = this;
 		FileConfiguration cfg = LonelySpawn.i().getConfig();
 		
-		generateSpawnsAsynchronously = cfg.getBoolean("GenerateSpawnsAsynchronously", false);
-		set(cfg, "GenerateSpawnsAsynchronously", generateSpawnsAsynchronously);
+		generateSpawnsAsynchronously = getAndSet(cfg, "GenerateSpawnsAsynchronously", false);
 		
-		String tempStr = cfg.getString("SpawnMessage", null);
-		tempStr = tempStr != null && tempStr.length() > 0 ? tempStr : "";
-		spawnMessage = ChatColor.translateAlternateColorCodes('&', tempStr);
-		set(cfg, "SpawnMessage", tempStr);
+		String spawnMessage = getAndSet(cfg, "SpawnMessage", "&3You awaken in a unfimiliar place.");
+		this.spawnMessage = ChatColor.translateAlternateColorCodes('&', spawnMessage);
 		
-		int temp;
+		int locationFindAttempts = getAndSet(cfg, "LocationFindAttempts", 20);
+		if (locationFindAttempts <= 0)
+		{
+			locationFindAttempts = 20;
+			set(cfg ,"LocationFindAttempts", locationFindAttempts);
+		}
+		this.locationFindAttempts = locationFindAttempts;
 		
-		temp = cfg.getInt("LocationFindAttempts", 20);
-		locationFindAttempts = temp <= 0 ? 20 : temp;
-		set(cfg, "LocaitonFindAttempts", locationFindAttempts);
-		
-		
-		temp = cfg.getInt("MinPlayerDistance", 0);
-		minPlayerDistance = temp < 0 ? 0 : temp; 
-		set(cfg, "MinPlayerDistance", minPlayerDistance);
-		
-		String defWorldName = cfg.getString("DefaultWorld", "world");
-		set(cfg, "DefaultWorld", defWorldName);
+		String defWorldName = getAndSet(cfg, "DefaultWorld", "world");
 		
 		// Configure worlds
 		ConfigurationSection cfgSect = cfg.getConfigurationSection("Worlds");
@@ -109,11 +99,8 @@ public class Config extends AbstractConfig
 			{
 				WorldConfig worldCfg = new WorldConfig(worldCfgSect, world);
 				
-				if (!worldCfg.checkConfig())
-				{
-					LonelySpawn.i().getLogger().warning("Disabled " + world.getName() + " due to invalid configuration");
+				if (!worldCfg.useRandomSpawn)
 					continue;
-				}
 				
 				worlds.put(world.getName().toLowerCase(), worldCfg);
 			}
